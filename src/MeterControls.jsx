@@ -1,8 +1,9 @@
 const MeterControls = ({ state, setState }) => {
   const handleChange = ({target}) => setState(prev => ({ ...prev, [target.name]: parseFloat(target.value) }));
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '15px' }}>
+    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+      {/* Value slider - full width */}
+      <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
           Value: {state.value}
         </label>
@@ -17,8 +18,9 @@ const MeterControls = ({ state, setState }) => {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-        <div>
+      {/* Other controls - flexbox wrap */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+        <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
           <label style={{ display: 'block', marginBottom: '5px' }}>Min:</label>
           <input
             type="number"
@@ -28,7 +30,7 @@ const MeterControls = ({ state, setState }) => {
             style={{ width: '100%', padding: '5px' }}
           />
         </div>
-        <div>
+        <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
           <label style={{ display: 'block', marginBottom: '5px' }}>Max:</label>
           <input
             type="number"
@@ -38,7 +40,7 @@ const MeterControls = ({ state, setState }) => {
             style={{ width: '100%', padding: '5px' }}
           />
         </div>
-        <div>
+        <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
           <label style={{ display: 'block', marginBottom: '5px' }}>Start Angle:</label>
           <input
             type="number"
@@ -48,7 +50,7 @@ const MeterControls = ({ state, setState }) => {
             style={{ width: '100%', padding: '5px' }}
           />
         </div>
-        <div>
+        <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
           <label style={{ display: 'block', marginBottom: '5px' }}>End Angle:</label>
           <input
             type="number"
@@ -56,6 +58,30 @@ const MeterControls = ({ state, setState }) => {
             value={state.endAngle}
             onChange={handleChange}
             style={{ width: '100%', padding: '5px' }}
+          />
+        </div>
+        <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>Scale Marks:</label>
+          <input
+            type="number"
+            name="numMarks"
+            value={state.numMarks}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '5px' }}
+            min="5"
+            max="200"
+          />
+        </div>
+        <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>Highlight Every:</label>
+          <input
+            type="number"
+            name="highlightEveryNth"
+            value={state.highlightEveryNth}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '5px' }}
+            min="1"
+            max="20"
           />
         </div>
       </div>

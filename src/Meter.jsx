@@ -181,7 +181,7 @@ const Meter = ({ state }) => {
       >
 
         {/* Scale markings */}
-        {generateScaleMarks(101, 10)}
+        {generateScaleMarks(state.numMarks, state.highlightEveryNth)}
 
         {/* Needle */}
         <path

@@ -11,6 +11,8 @@ function App() {
     value: 50,
     startAngle: -130,
     endAngle: 130,
+    numMarks: 101,
+    highlightEveryNth: 10,
   });
 
   return (
