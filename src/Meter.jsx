@@ -23,8 +23,8 @@ const Meter = ({ state }) => {
       const delta = target - current;
       
       // Physics constants (adjust these for different feel)
-      const springStrength = 0.125;  // How strong the pull toward target is
-      const damping = 0.875;         // How quickly oscillation dies down
+      const springStrength = 0.0325;  // How strong the pull toward target is
+      const damping = 0.9;         // How quickly oscillation dies down
       const minVelocity = 0.01;     // Stop animating when velocity is tiny
       
       // Spring physics: acceleration toward target
@@ -67,7 +67,7 @@ const Meter = ({ state }) => {
       
       // Add initial velocity boost based on how big the change is
       const deltaChange = targetAngle - currentAngleRef.current;
-      const boostFactor = Math.min(Math.abs(deltaChange) * 0.00625, 2); // Bigger changes = more initial velocity
+      const boostFactor = Math.min(Math.abs(deltaChange) * 0.0125, 2); // Bigger changes = more initial velocity
       velocityRef.current += deltaChange * 0.125 * boostFactor;
       
       // Cancel any existing animation
