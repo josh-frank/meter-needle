@@ -90,38 +90,44 @@ const Meter = ({ state }) => {
   const needleAngle = currentAngle;
 
   // Generate dynamic arc path based on startAngle and endAngle
-  const generateArcPath = ({ startAngle, endAngle }) => {
+  const generateArcPath = () => {
     const radius = 35;
-    const startRadian = ((startAngle - 90) * Math.PI) / 180;
-    const endRadian = ((endAngle - 90) * Math.PI) / 180;
+    const startRadian = ((state.startAngle - 90) * Math.PI) / 180;
+    const endRadian = ((state.endAngle - 90) * Math.PI) / 180;
     const startX = Math.cos(startRadian) * radius;
     const startY = Math.sin(startRadian) * radius;
     const endX = Math.cos(endRadian) * radius;
     const endY = Math.sin(endRadian) * radius;
-    const largeArcFlag = (endAngle - startAngle) > 180 ? 1 : 0;
+    const largeArcFlag = (state.endAngle - state.startAngle) > 180 ? 1 : 0;
     return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
   };
 
   // Generate scale markings
-  const generateScaleMarks = ({ min, max, startAngle, endAngle }) => {
-    const numMarks = 11; // 0, 10, 20, ..., 100
-    
+  const generateScaleMarks = (numMarks, highlightEveryNth = 10) => {    
     return Array.from({ length: numMarks }, (_, i) => {
-      const angle = startAngle + (i / (numMarks - 1)) * (endAngle - startAngle);
+      const angle = state.startAngle + (i / (numMarks - 1)) * (state.endAngle - state.startAngle);
       // Adjust angle by -90 degrees to align with galvanometer orientation (0° at top)
       const adjustedAngle = angle - 90;
       const radian = (adjustedAngle * Math.PI) / 180;
-      const innerRadius = 35;
-      const outerRadius = 42;
+      
+      const value = state.min + (i / (numMarks - 1)) * (state.max - state.min);
+      
+      // Determine if this is a highlighted mark (every nth mark OR first/last marks)
+      const isHighlighted = (i % highlightEveryNth === 0) || (i === numMarks - 1);
+      
+      // Different radii and styling for highlighted vs normal marks
+      const innerRadius = isHighlighted ? 33 : 35;
+      const outerRadius = isHighlighted ? 42 : 40;
+      const strokeWidth = isHighlighted ? 1 : 0.5;
+      const strokeColor = isHighlighted ? "#2c3e50" : "#999";
       
       const x1 = Math.cos(radian) * innerRadius;
       const y1 = Math.sin(radian) * innerRadius;
       const x2 = Math.cos(radian) * outerRadius;
       const y2 = Math.sin(radian) * outerRadius;
       
-      const value = min + (i / (numMarks - 1)) * (max - min);
-      const textX = Math.cos(radian) * 30;
-      const textY = Math.sin(radian) * 30;
+      const textX = Math.cos(radian) * 28;
+      const textY = Math.sin(radian) * 28;
       
       return (
         <g key={i}>
@@ -130,19 +136,23 @@ const Meter = ({ state }) => {
             y1={y1}
             x2={x2}
             y2={y2}
-            stroke="#333"
-            strokeWidth="1"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
           />
-          <text
-            x={textX}
-            y={textY}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize="6"
-            fill="#333"
-          >
-            {Math.round(value)}
-          </text>
+          {/* Only show text labels on highlighted marks */}
+          {isHighlighted && (
+            <text
+              x={textX}
+              y={textY}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize="6"
+              fill="#2c3e50"
+              fontWeight="bold"
+            >
+              {Math.round(value)}
+            </text>
+          )}
         </g>
       );
     });
@@ -169,58 +179,57 @@ const Meter = ({ state }) => {
           border: '3px solid #2c3e50'
         }}
       >
+
+        {/* Scale markings */}
+        {generateScaleMarks(101, 10)}
+
+        {/* Needle */}
+        <path
+          d='m -1 0 l 1 -40 l 1 40 z'
+          fill='#e74c3c'
+          // stroke='#e74c3c'
+          // strokeWidth='1'
+          style={{
+            transformOrigin: '0 0',
+            transform: `rotate(${needleAngle}deg)`,
+          }}
+        />
+
+        {/* Needle tip */}
+        <circle 
+          cx="0" 
+          cy="-40" 
+          r="1" 
+          fill="#c0392b"
+          style={{
+            transformOrigin: '0 0',
+            transform: `rotate(${needleAngle}deg)`,
+          }}
+        />
+
+        {/* Center pivot */}
+        <circle cx="0" cy="0" r="2" fill="#2c3e50" style={{ zIndex: 1 }} />
+
         {/* Outer arc */}
         <path
-          d={generateArcPath(state)}
+          d={generateArcPath()}
           fill="none"
           stroke="#2c3e50"
           strokeWidth="2"
         />
-        
-        {/* Scale markings */}
-        {generateScaleMarks(state)}
-        
-        {/* Center pivot */}
-        <circle cx="0" cy="0" r="3" fill="#2c3e50" />
-        
-        {/* Needle */}
-        <line
-          x1="0"
-          y1="0"
-          x2="0"
-          y2="-32"
-          stroke="#e74c3c"
-          strokeWidth="2"
-          strokeLinecap="round"
-          style={{
-            transformOrigin: '0 0',
-            transform: `rotate(${needleAngle}deg)`
-          }}
-        />
-        
-        {/* Needle tip */}
-        <circle 
-          cx="0" 
-          cy="-32" 
-          r="1.5" 
-          fill="#c0392b"
-          style={{
-            transformOrigin: '0 0',
-            transform: `rotate(${needleAngle}deg)`
-          }}
-        />
-        
-        {/* Current value display */}
-        <text
-          x="0"
-          y="15"
-          textAnchor="middle"
-          fontSize="8"
-          fill="#2c3e50"
-          fontWeight="bold"
-        >
-          {state.value.toFixed(1)}
-        </text>
+
+          {/* Current value display */}
+          <text
+            x="0"
+            y="15"
+            textAnchor="middle"
+            fontSize="8"
+            fill="#2c3e50"
+            fontWeight="bold"
+          >
+            {/* {state.value.toFixed(1)} */}
+            {(state.min + ((currentAngle - state.startAngle) / (state.endAngle - state.startAngle)) * (state.max - state.min)).toFixed(1)}
+          </text>
       </svg>
     </div>
   );
