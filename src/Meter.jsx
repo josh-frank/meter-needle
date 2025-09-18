@@ -24,7 +24,7 @@ const Meter = ({ state }) => {
       
       // Physics constants (adjust these for different feel)
       const springStrength = 0.0325;  // How strong the pull toward target is
-      const damping = 0.9;         // How quickly oscillation dies down
+      const damping = 0.925;         // How quickly oscillation dies down
       const minVelocity = 0.01;     // Stop animating when velocity is tiny
       
       // Spring physics: acceleration toward target

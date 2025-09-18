@@ -26,19 +26,28 @@ class EnvironmentalGSRMeter {
         this.fftSize = 2048;
     }
 
-    async initialize() {
+    async initialize(deviceId = null) {
         try {
             // Request microphone access
             console.log("🎤 Requesting microphone access...");
+            
+            const audioConstraints = {
+                sampleRate: this.sampleRate,
+                channelCount: 1,
+                echoCancellation: false,  // CRITICAL: Disable processing
+                noiseSuppression: false,  // CRITICAL: Keep the noise!
+                autoGainControl: false,   // CRITICAL: Don't auto-adjust
+                latency: 0.01            // Low latency
+            };
+            
+            // Use specific device if provided
+            if (deviceId) {
+                audioConstraints.deviceId = { exact: deviceId };
+                console.log(`🎯 Using specific audio device: ${deviceId}`);
+            }
+            
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    sampleRate: this.sampleRate,
-                    channelCount: 1,
-                    echoCancellation: false,  // CRITICAL: Disable processing
-                    noiseSuppression: false,  // CRITICAL: Keep the noise!
-                    autoGainControl: false,   // CRITICAL: Don't auto-adjust
-                    latency: 0.01            // Low latency
-                }
+                audio: audioConstraints
             });
 
             // Create audio context
@@ -65,9 +74,9 @@ class EnvironmentalGSRMeter {
         }
     }
 
-    async startMeasurement() {
+    async startMeasurement(deviceId = null) {
         if (!this.audioContext) {
-            const success = await this.initialize();
+            const success = await this.initialize(deviceId);
             if (!success) return false;
         }
 
@@ -83,6 +92,24 @@ class EnvironmentalGSRMeter {
         return true;
     }
 
+    // Get available audio input devices
+    static async getAudioInputDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInputs = devices.filter(device => device.kind === 'audioinput');
+            
+            console.log("🎤 Available audio input devices:");
+            audioInputs.forEach((device, index) => {
+                console.log(`${index + 1}. ${device.label || `Microphone ${index + 1}`} (${device.deviceId.slice(0, 8)}...)`);
+            });
+            
+            return audioInputs;
+        } catch (error) {
+            console.error("❌ Failed to enumerate audio devices:", error);
+            return [];
+        }
+    }
+
     async calibrateBaseline() {
         console.log("📏 Calibrating baseline (3 seconds)...");
         
@@ -95,12 +122,28 @@ class EnvironmentalGSRMeter {
                 const amplitude = this.getCurrentAmplitude();
                 samples.push(amplitude);
                 
+                // Debug: Log every 10th sample to see if we're getting data
+                if (samples.length % 10 === 0) {
+                    console.log(`📊 Calibration sample ${samples.length}: ${amplitude}`);
+                }
+                
                 if (Date.now() - startTime < calibrationTime) {
                     requestAnimationFrame(collectBaseline);
                 } else {
                     // Calculate average baseline
                     this.baselineAmplitude = samples.reduce((sum, val) => sum + val, 0) / samples.length;
-                    console.log(`✅ Baseline established: ${this.baselineAmplitude.toFixed(2)}`);
+                    console.log(`✅ Baseline established: ${this.baselineAmplitude.toFixed(2)} from ${samples.length} samples`);
+                    
+                    // Debug: Show sample statistics
+                    const minSample = Math.min(...samples);
+                    const maxSample = Math.max(...samples);
+                    console.log(`📈 Sample range: ${minSample} to ${maxSample}`);
+                    
+                    // Warn if baseline is suspiciously low
+                    if (this.baselineAmplitude < 0.1) {
+                        console.warn("⚠️ Very low baseline amplitude - microphone might not be working");
+                    }
+                    
                     resolve();
                 }
             };
@@ -155,35 +198,60 @@ class EnvironmentalGSRMeter {
     }
 
     calculateGSR() {
+        // SAFETY CHECKS to prevent NaN values!
+        
+        // Ensure we have valid baseline (prevent division by zero)
+        if (!this.baselineAmplitude || this.baselineAmplitude === 0) {
+            console.warn("⚠️ Zero baseline amplitude - using fallback");
+            this.baselineAmplitude = 1; // Minimum fallback value
+        }
+        
+        // Ensure current amplitude is valid
+        const safeCurrentAmplitude = Number.isFinite(this.currentAmplitude) ? this.currentAmplitude : 0;
+        
         // Calculate change from baseline
-        const amplitudeDelta = this.currentAmplitude - this.baselineAmplitude;
+        const amplitudeDelta = safeCurrentAmplitude - this.baselineAmplitude;
         const percentChange = (amplitudeDelta / this.baselineAmplitude) * 100;
+        
+        // Ensure percent change is finite
+        const safePercentChange = Number.isFinite(percentChange) ? percentChange : 0;
         
         // Convert to resistance estimate (this is the magic!)
         // Lower amplitude = higher resistance (signal is being attenuated)
         // Higher amplitude = lower resistance (better signal conduction)
-        const resistanceChange = -percentChange * this.calibrationMultiplier;
+        const resistanceChange = -safePercentChange * this.calibrationMultiplier;
         
         // Estimate absolute resistance (requires calibration with known resistors)
         const baseResistance = 100000; // 100kΩ typical baseline
-        const estimatedResistance = baseResistance * (1 + resistanceChange / 100);
+        let estimatedResistance = baseResistance * (1 + resistanceChange / 100);
+        
+        // Ensure resistance is positive and finite (prevent division by zero in conductance)
+        estimatedResistance = Math.max(1000, Number.isFinite(estimatedResistance) ? estimatedResistance : 100000);
         
         // Calculate conductance (inverse of resistance)
         const conductance = (1 / estimatedResistance) * 1000000; // microsiemens
         
-        // Normalize for meter display (0-100 scale)
+        // Normalize for meter display (0-100 scale) - with safety bounds
+        const safeConductance = Number.isFinite(conductance) ? conductance : 10;
         const meterValue = Math.max(0, Math.min(100, 
-            (conductance - 5) / (50 - 5) * 100 // 5-50µS range
+            (safeConductance - 5) / (50 - 5) * 100 // 5-50µS range
         ));
 
-        return {
-            amplitude: this.currentAmplitude,
-            percentChange: percentChange,
+        const result = {
+            amplitude: safeCurrentAmplitude,
+            percentChange: safePercentChange,
             resistance: estimatedResistance,
-            conductance: conductance,
-            meterValue: meterValue,
+            conductance: safeConductance,
+            meterValue: Number.isFinite(meterValue) ? meterValue : 0,
             timestamp: Date.now()
         };
+        
+        // Debug logging for NaN detection
+        if (Object.values(result).some(val => !Number.isFinite(val))) {
+            console.warn("⚠️ NaN detected in GSR calculation:", result);
+        }
+
+        return result;
     }
 
     // Calibration helper - use with known resistors

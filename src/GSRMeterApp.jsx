@@ -13,6 +13,8 @@ function GSRMeterApp() {
     const [isConnected, setIsConnected] = useState(false);
     const [gsrData, setGsrData] = useState(null);
     const [sessionData, setSessionData] = useState([]);
+    const [audioDevices, setAudioDevices] = useState([]);
+    const [selectedDevice, setSelectedDevice] = useState('');
     const gsrMeter = useRef(null);
 
     useEffect(() => {
@@ -25,16 +27,32 @@ function GSRMeterApp() {
             setSessionData(prev => [...prev, data]);
         });
 
+        // Load available audio devices
+        const loadAudioDevices = async () => {
+            const devices = await EnvironmentalGSRMeter.getAudioInputDevices();
+            setAudioDevices(devices);
+            
+            // Auto-select first device if available
+            if (devices.length > 0 && !selectedDevice) {
+                setSelectedDevice(devices[0].deviceId);
+            }
+        };
+        
+        loadAudioDevices();
+
         return () => {
             if (gsrMeter.current) {
                 gsrMeter.current.stop();
             }
         };
-    }, []);
+    }, [selectedDevice]);
 
     const handleStartMeasurement = async () => {
         if (gsrMeter.current) {
-            const success = await gsrMeter.current.startMeasurement();
+            const deviceId = selectedDevice || null;
+            console.log(`🎯 Starting measurement with device: ${deviceId || 'default'}`);
+            
+            const success = await gsrMeter.current.startMeasurement(deviceId);
             setIsConnected(success);
             
             if (success) {
@@ -95,6 +113,43 @@ function GSRMeterApp() {
                     <li>Hold the cans/electrodes in your hands</li>
                     <li>Click "Connect & Start Measurement" below</li>
                 </ol>
+            </div>
+
+            {/* Audio Device Selection */}
+            <div style={{ 
+                backgroundColor: '#e3f2fd', 
+                padding: '15px', 
+                borderRadius: '8px', 
+                marginBottom: '20px',
+                fontSize: '14px'
+            }}>
+                <strong>🎤 Select Audio Input Device:</strong>
+                <div style={{ marginTop: '10px' }}>
+                    <select 
+                        value={selectedDevice}
+                        onChange={(e) => setSelectedDevice(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '8px',
+                            borderRadius: '4px',
+                            border: '1px solid #ccc',
+                            fontSize: '14px'
+                        }}
+                        disabled={isConnected}
+                    >
+                        {audioDevices.map((device, index) => (
+                            <option key={device.deviceId} value={device.deviceId}>
+                                {device.label || `Microphone ${index + 1}`}
+                                {device.label.toLowerCase().includes('built-in') && ' (Built-in - NOT for GSR)'}
+                                {device.label.toLowerCase().includes('line') && ' (Line Input - Good for GSR!)'}
+                                {device.label.toLowerCase().includes('external') && ' (External - Good for GSR!)'}
+                            </option>
+                        ))}
+                    </select>
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                        💡 Choose "Line Input", "External", or avoid "Built-in" for best GSR results
+                    </div>
+                </div>
             </div>
 
             {/* Connection Controls */}
@@ -160,12 +215,15 @@ function GSRMeterApp() {
                 justifyContent: 'center', 
                 marginBottom: '30px' 
             }}>
-                <Meter 
-                    value={gsrValue} 
-                    label="Galvanic Skin Response"
-                    unit="µS"
-                    // You might want to add an isConnected prop to show connection status
-                />
+                <Meter state={{
+                    value: gsrValue,
+                    min: 0,
+                    max: 100,
+                    startAngle: -130,
+                    endAngle: 130,
+                    numMarks: 21,
+                    highlightEveryNth: 5
+                }} />
             </div>
 
             {/* Live Data Display */}
