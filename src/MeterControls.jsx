@@ -1,3 +1,5 @@
+// import Knob from "./Knob";
+
 const MeterControls = ({ state, setState }) => {
   const handleChange = ({target}) => setState(prev => ({ ...prev, [target.name]: parseFloat(target.value) }));
   return (
@@ -17,6 +19,9 @@ const MeterControls = ({ state, setState }) => {
           style={{ width: '100%' }}
         />
       </div>
+
+      {/* Value knob */}
+      {/* <Knob state={state} setState={setState} /> */}
 
       {/* Other controls - flexbox wrap */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>

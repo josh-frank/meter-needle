@@ -1,25 +1,38 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 
-const Knob = ({
-  value = 50,
-  onChange = () => {},
-  min = 0,
-  max = 360,
-  step = 1,
-  precision = 0,
-  unit = "deg",
-  label = "Knob"
-}) => {
+const Knob = ({ state, setState }) => {
+  // Extract values from state with defaults
+  const {
+    value = 50,
+    min = 0,
+    max = 360,
+    step = 1,
+    precision = 0,
+    unit = "deg",
+    label = "Knob",
+    continuous = false,
+    startAngle = 0,
+    endAngle = 360
+  } = state || {};
   const svgRef = useRef(null);
   const isDraggingRef = useRef(false);
   const centerRef = useRef({ x: 0, y: 0 });
   const handlersRef = useRef({});
   
-  // Convert value to angle for display (starts at right=0°)
+  // Convert value to angle for display
   const valueToDisplayAngle = useCallback((val) => {
     const normalizedValue = (val - min) / (max - min);
-    return normalizedValue * 360; // 0-360 range for display
-  }, [min, max]);
+    
+    if (continuous) {
+      // Original behavior: full 360° rotation
+      return normalizedValue * 360;
+    } else {
+      // Constrained to arc: map to startAngle-endAngle range
+      let arcRange = endAngle - startAngle;
+      if (arcRange <= 0) arcRange += 360; // Handle wrap-around
+      return startAngle + (normalizedValue * arcRange);
+    }
+  }, [min, max, continuous, startAngle, endAngle]);
 
   const [displayAngle, setDisplayAngle] = useState(() => valueToDisplayAngle(value));
 
@@ -52,6 +65,10 @@ const Knob = ({
     deg = 360 - deg;
     if (deg >= 360) deg -= 360;
     
+    // Rotate by +90 degrees to compensate for visual rotation (so 0° calculation matches 0° visual)
+    deg = deg + 90;
+    if (deg >= 360) deg -= 360;
+    
     return deg;
   }, [displayAngle]);
 
@@ -59,11 +76,46 @@ const Knob = ({
   const handlePointerMove = useCallback((event) => {
     if (!isDraggingRef.current) return;
     
-    const deg = calculateAngleFromPointer(event);
+    let deg = calculateAngleFromPointer(event);
+    
+    if (!continuous) {
+      // Constrain angle to the arc range
+      let arcRange = endAngle - startAngle;
+      if (arcRange <= 0) arcRange += 360; // Handle wrap-around
+      
+      // Normalize the angle relative to startAngle
+      let relativeAngle = deg - startAngle;
+      if (relativeAngle < 0) relativeAngle += 360;
+      if (relativeAngle > 360) relativeAngle -= 360;
+      
+      // Constrain to arc range
+      if (arcRange < 360) {
+        if (relativeAngle > arcRange) {
+          // Choose the closest boundary
+          const distToStart = relativeAngle > 180 ? 360 - relativeAngle : relativeAngle;
+          const distToEnd = Math.abs(relativeAngle - arcRange);
+          relativeAngle = distToStart <= distToEnd ? 0 : arcRange;
+        }
+      }
+      
+      deg = startAngle + relativeAngle;
+      if (deg >= 360) deg -= 360;
+    }
+    
     setDisplayAngle(deg);
     
-    // Convert display angle to value (0-360 degrees to min-max range)
-    const normalizedAngle = deg / 360; // 0 to 1
+    // Convert display angle to value
+    let normalizedAngle;
+    if (continuous) {
+      normalizedAngle = deg / 360; // 0 to 1
+    } else {
+      let arcRange = endAngle - startAngle;
+      if (arcRange <= 0) arcRange += 360;
+      let relativeAngle = deg - startAngle;
+      if (relativeAngle < 0) relativeAngle += 360;
+      normalizedAngle = relativeAngle / arcRange; // 0 to 1 within arc
+    }
+    
     let newValue = min + (normalizedAngle * (max - min));
     
     // Round to step
@@ -72,8 +124,11 @@ const Knob = ({
     // Clamp to range
     newValue = Math.max(min, Math.min(max, newValue));
     
-    onChange(newValue);
-  }, [calculateAngleFromPointer, min, max, step, onChange]);
+    // Update state with new value
+    if (setState) {
+      setState(prev => ({ ...prev, value: newValue }));
+    }
+  }, [calculateAngleFromPointer, min, max, step, setState, continuous, startAngle, endAngle]);
 
   // Handle pointer up
   const handlePointerUp = useCallback(() => {
@@ -145,7 +200,11 @@ const Knob = ({
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          if (setState) {
+            setState(prev => ({ ...prev, value: Number(e.target.value) }));
+          }
+        }}
         style={{ display: 'none' }}
         aria-label={label}
       />
@@ -186,6 +245,37 @@ const Knob = ({
             strokeWidth="1"
           />
           
+          {/* Arc indicator when not continuous */}
+          {!continuous && (() => {
+            const radius = 6.5; // Slightly smaller than the circle radius
+            const centerX = 8;
+            const centerY = 8;
+            
+            // Calculate start and end points (adjust by +90° to compensate for visual rotation)
+            const startAngleRad = ((startAngle - 90) * Math.PI) / 180;
+            const endAngleRad = ((endAngle - 90) * Math.PI) / 180;
+            
+            const startX = centerX + radius * Math.cos(startAngleRad);
+            const startY = centerY + radius * Math.sin(startAngleRad);
+            const endX = centerX + radius * Math.cos(endAngleRad);
+            const endY = centerY + radius * Math.sin(endAngleRad);
+            
+            // Determine if we need the large arc flag
+            let arcRange = endAngle - startAngle;
+            if (arcRange <= 0) arcRange += 360;
+            const largeArcFlag = arcRange > 180 ? 1 : 0;
+            
+            return (
+              <path
+                d={`M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`}
+                fill="none"
+                stroke="#3498db"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            );
+          })()}
+          
           {/* Pointer line (Dev.to style) */}
           <line 
             x1="50%" 
@@ -197,7 +287,7 @@ const Knob = ({
             strokeLinecap="round"
             style={{
               transformOrigin: 'center center',
-              transform: `rotate(${displayAngle}deg)`,
+              transform: `rotate(${displayAngle - 90}deg)`,
             }}
           />
         </svg>

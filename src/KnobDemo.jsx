@@ -2,8 +2,31 @@ import React, { useState } from 'react';
 import Knob from './Knob.jsx';
 
 function KnobDemo() {
-    const [angle, setAngle] = useState(45);
-    const [volume, setVolume] = useState(75);
+    const [angleState, setAngleState] = useState({
+        value: 45,
+        min: 0,
+        max: 360,
+        step: 1,
+        precision: 0,
+        unit: "deg",
+        label: "🎯 Angle Control",
+        continuous: true,
+        startAngle: 0,
+        endAngle: 360
+    });
+    
+    const [volumeState, setVolumeState] = useState({
+        value: 75,
+        min: 0,
+        max: 100,
+        step: 1,
+        precision: 0,
+        unit: "%",
+        label: "🔊 Volume Control",
+        continuous: true,
+        startAngle: 0,
+        endAngle: 360
+    });
 
     return (
         <div style={{ 
@@ -39,25 +62,13 @@ function KnobDemo() {
                 marginBottom: '30px'
             }}>
                 <Knob
-                    value={angle}
-                    onChange={setAngle}
-                    min={0}
-                    max={360}
-                    step={1}
-                    precision={0}
-                    unit="deg"
-                    label="🎯 Angle Control"
+                    state={angleState}
+                    setState={setAngleState}
                 />
                 
                 <Knob
-                    value={volume}
-                    onChange={setVolume}
-                    min={0}
-                    max={100}
-                    step={1}
-                    precision={0}
-                    unit="%"
-                    label="🔊 Volume Control"
+                    state={volumeState}
+                    setState={setVolumeState}
                 />
             </div>
 
@@ -76,12 +87,12 @@ function KnobDemo() {
                             width: '100px',
                             height: '100px',
                             margin: '0 auto',
-                            background: `conic-gradient(red ${angle}deg, white ${angle + 10}deg)`,
+                            background: `conic-gradient(red ${angleState.value}deg, white ${angleState.value + 10}deg)`,
                             borderRadius: '50%',
                             border: '2px solid #333'
                         }}
                     />
-                    <p>Angle: {angle}°</p>
+                    <p>Angle: {angleState.value}°</p>
                 </div>
 
                 {/* Volume visualization */}
@@ -102,12 +113,12 @@ function KnobDemo() {
                             bottom: 0,
                             left: 0,
                             right: 0,
-                            height: `${volume}%`,
-                            backgroundColor: volume > 80 ? '#ff4444' : volume > 50 ? '#ffaa00' : '#44ff44',
+                            height: `${volumeState.value}%`,
+                            backgroundColor: volumeState.value > 80 ? '#ff4444' : volumeState.value > 50 ? '#ffaa00' : '#44ff44',
                             transition: 'height 0.2s ease'
                         }} />
                     </div>
-                    <p>Volume: {volume}%</p>
+                    <p>Volume: {volumeState.value}%</p>
                 </div>
             </div>
 
@@ -121,7 +132,12 @@ function KnobDemo() {
             }}>
                 <strong>Current Values:</strong>
                 <pre style={{ margin: '10px 0' }}>
-{JSON.stringify({ angle, volume }, null, 2)}
+{JSON.stringify({ 
+  angle: angleState.value, 
+  volume: volumeState.value,
+  angleState,
+  volumeState 
+}, null, 2)}
                 </pre>
             </div>
         </div>
