@@ -261,7 +261,7 @@ const ToneArm = ({
         {/* Sharp pointed needle - E-meter style! */}
         <path
           d='m -0.5 0 l 0.5 -38 l 0.5 38 z'
-          fill='#e74c3c'
+          fill='#c0392b'
           stroke='#c0392b'
           strokeWidth='0.5'
           style={{
@@ -277,7 +277,7 @@ const ToneArm = ({
           cy="-38" 
           r="1.5" 
           fill="#c0392b"
-          stroke="#8b2635"
+          // stroke="#8b2635"
           strokeWidth="0.5"
           style={{
             transformOrigin: '0 0',

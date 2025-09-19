@@ -62,12 +62,30 @@ function KnobDemo() {
                 marginBottom: '30px'
             }}>
                 <Knob
-                    state={angleState}
+                    value={angleState.value}
+                    min={angleState.min}
+                    max={angleState.max}
+                    step={angleState.step}
+                    precision={angleState.precision}
+                    unit={angleState.unit}
+                    label={angleState.label}
+                    continuous={angleState.continuous}
+                    startAngle={angleState.startAngle}
+                    endAngle={angleState.endAngle}
                     setState={setAngleState}
                 />
                 
                 <Knob
-                    state={volumeState}
+                    value={volumeState.value}
+                    min={volumeState.min}
+                    max={volumeState.max}
+                    step={volumeState.step}
+                    precision={volumeState.precision}
+                    unit={volumeState.unit}
+                    label={volumeState.label}
+                    continuous={volumeState.continuous}
+                    startAngle={volumeState.startAngle}
+                    endAngle={volumeState.endAngle}
                     setState={setVolumeState}
                 />
             </div>

@@ -1,70 +1,59 @@
 import { useState } from 'react';
 import './App.css';
-// import Meter from './Meter';
+import Meter from './Meter';
+import Knob from './Knob';
 // import MeterControls from './MeterControls';
-import ToneArmDemo from './ToneArmDemo';
-import KnobDemo from './KnobDemo';
-// import GSRMeterApp from './GSRMeterApp';
 
 function App() {
-  const [currentView, setCurrentView] = useState('knob');
+  const [state, setState] = useState({
+    min: 0,
+    max: 100,
+    value: 50,
+  });
 
-  // const [state, setState] = useState({
-  //   min: 0,
-  //   max: 100,
-  //   value: 50,
-  //   startAngle: -130,
-  //   endAngle: 130,
-  //   numMarks: 101,
-  //   highlightEveryNth: 10,
-  // });
-
-  return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      {/* Navigation */}
-      <div style={{ 
-        textAlign: 'center', 
-        marginBottom: '20px',
-        borderBottom: '1px solid #ccc',
-        paddingBottom: '15px'
-      }}>
-        <button 
-          onClick={() => setCurrentView('knob')}
-          style={{
-            backgroundColor: currentView === 'knob' ? '#4CAF50' : '#f5f5f5',
-            color: currentView === 'knob' ? 'white' : '#333',
-            border: '1px solid #ccc',
-            padding: '10px 20px',
-            margin: '0 5px',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          🎛️ Dev.to Knob
-        </button>
-        
-        <button 
-          onClick={() => setCurrentView('tonearm')}
-          style={{
-            backgroundColor: currentView === 'tonearm' ? '#4CAF50' : '#f5f5f5',
-            color: currentView === 'tonearm' ? 'white' : '#333',
-            border: '1px solid #ccc',
-            padding: '10px 20px',
-            margin: '0 5px',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          📡 Tone Arm
-        </button>
-      </div>
-
-      {/* Render current view */}
-      {currentView === 'knob' && <KnobDemo />}
-      {currentView === 'tonearm' && <ToneArmDemo />}
+  return <>
+    <div style={{
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      transform: 'translate(10, 10)',
+      height: '800px',
+      width: '800px',
+    }}>
+      <Meter
+        value={state.value}
+        min={state.min}
+        max={state.max}
+        startAngle={-180}
+        endAngle={90}
+        numMarks={101}
+        highlightEveryNth={10}
+        viewbox='-45 -45 80 80'
+      />
     </div>
-  );
-
+    <div style={{
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      height: '400px',
+      width: '400px',
+    }}>
+      <Knob
+        value={state.value}
+        min={state.min}
+        max={state.max}
+        step={state.step}
+        label='Tone arm'
+        continuous={false}
+        startAngle={-140}
+        endAngle={140}
+        numMarks={15}
+        highlightEveryNth={2}
+        setState={setState}
+      />
+    </div>
+    {/* <MeterControls state={state} setState={setState} /> */}
+  </>;
 }
 
 export default App
